@@ -1,0 +1,20 @@
+[project]
+name = "clearview-rag"
+version = "0.1.0"
+description = "A transparent RAG application using Query Expansion and Cross-Encoder Reranking"
+requires-python = ">=3.12, <3.13"
+dependencies = [
+    "langchain>=0.3.0,<1.0.0",           # Pinned to 0.3.x to ensure stability
+    "langchain-community>=0.3.0,<1.0.0", # Must match core version
+    "langchain-openai>=0.2.0",
+    "langchain-text-splitters>=0.3.0",
+    "chromadb>=0.5.0",
+    "flashrank>=0.2.0",
+    "python-dotenv>=1.0.0",
+    "streamlit>=1.39.0",
+    "watchdog>=5.0.0",
+    "reportlab>=4.0.0",
+    "ipykernel>=6.29.0",
+    "pypdf>=4.0.0",
+    "langsmith>=0.1.0"
+]

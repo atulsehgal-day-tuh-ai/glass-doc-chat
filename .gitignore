@@ -1,0 +1,38 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+
+# Virtual environments
+.env
+.env/
+.venv/
+venv/
+ENV/
+env/
+
+# Environment configuration (sensitive)
+configs/*.env
+
+# Local data or logs
+*.log
+logs/
+tmp/
+.cache/
+
+# Streamlit & LangChain local cache
+.streamlit/
+langchain/
+.openai/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# folders
+# .gitignore
+maintenance/
+backups/
