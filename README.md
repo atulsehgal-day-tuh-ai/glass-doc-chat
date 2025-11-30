@@ -88,13 +88,57 @@ streamlit run app.py
 
 ---
 
-## 🧠 How it Works (The Pipeline)
+## 🧠 Masterclass Logic Map: Under the Hood
 
-1.  **User Question:** "My team is disconnected."
-2.  **Expansion:** LLM generates: *"Strategies for remote team bonding", "Improving hybrid culture", etc.*
-3.  **Retrieval:** The system searches the **ChromaDB** for *all* these variations, casting a wide net.
-4.  **Reranking (The Filter):** **FlashRank** reads the retrieved text and scores it (0.0 to 1.0) based on relevance to your original specific problem. Low-score documents are discarded.
-5.  **Generation:** The top documents are sent to GPT-4o to generate the final answer.
+This application uses a specific data flow architecture designed for transparency and robustness. Here is the line-by-line technical breakdown of how `app.py` functions.
+
+### 1. The Setup (Configuration)
+**Role:** Sets the stage before any app logic runs.
+* **`load_dotenv()`:** The bouncer. It checks your `.env` file to ensure you have the "keys" (API tokens) to enter.
+* **Imports:** Loads the toolboxes (`LangChain` for logic, `Streamlit` for UI, `Chroma` for memory).
+* **`PERSIST_DIR`:** Defines the "Filing Cabinet" on your hard drive (`./chroma_db_storage`) where documents will live forever.
+* **LangSmith Check:** A safety mechanism. It checks if the tracing tools are installed; if not, it creates a "fake" decorator so the app doesn't crash on machines without LangSmith.
+
+### 2. The Librarian (Database Functions)
+**Role:** Handling raw files. These functions only run when you upload a PDF or restart the app.
+* **`get_embedding_function()`** *(Cached)*:
+    * **Job:** Creates the "Translator" that turns text into numbers.
+    * **Why Cached?** We don't want to re-hire the translator every time you click a button. We hire them once and keep them on retainer using `@st.cache_resource`.
+* **`load_vectorstore()`**:
+    * **Job:** Walks to the file cabinet (`PERSIST_DIR`). If it sees files, it opens the drawer so we can search. If empty, it returns `None`.
+* **`add_documents_to_db(files)`**:
+    * **Job:** The "ETL" (Extract, Transform, Load) worker.
+    * **Sequence:**
+        1.  **Extract:** Saves the uploaded bytes to a temp file so `PyPDFLoader` can read it.
+        2.  **Transform:** `RecursiveCharacterTextSplitter` chops the PDF into 500-character index cards.
+        3.  **Load:** `vectorstore.add_documents` sends those cards to the Embedding model (to get numbers) and files them in the cabinet.
+
+### 3. The Brain (The RAG Pipeline)
+**Role:** The Thinker. This function (`run_rag_pipeline`) contains the **entire intelligence** of your app.
+* **The `@traceable` Decorator:** Wraps the entire function in a "Trace Bubble." Any step that happens inside this function is grouped together in LangSmith under one name: "ClearView RAG Pipeline".
+* **Sequence of Events:**
+    1.  **Query Expansion:** The LLM acts as a creative writer, generating 5 variations of your question.
+    2.  **Retrieval:** The Retriever takes all 6 questions (1 original + 5 variations) and runs 6 searches against the database. It compiles a unique list of found documents.
+    3.  **Reranking:** **FlashRank** acts as a strict editor. It reads the 20+ documents found and gives them a score (0-1). Low scores are tossed out.
+    4.  **Generation:** The LLM acts as the final speaker. It reads the surviving documents and answers your question.
+
+### 4. The Face (The UI Loop)
+**Role:** The Interaction. Streamlit runs this section from top to bottom *every time* you interact.
+1.  **Sidebar Logic:** Checks if the database exists and handles file uploads.
+2.  **Session State Initialization:** Creates "Short-term Memory" (`st.session_state.messages`) so chat history doesn't vanish on refresh.
+3.  **Chat Loop (The "Input/Process" Pattern):**
+    * **Input Event:** `if prompt := st.chat_input...`: Takes text, saves to memory, and immediately refreshes (`st.rerun()`) so the user sees their message instantly.
+    * **Processing Event:** `if ... last_message == "user"`: This block runs *after* the refresh. It triggers the pipeline, captures the `run_id` from the `collect_runs()` net, and refreshes again to show the answer.
+4.  **Transparency Board (Right Pane):** Reads the `latest_trace` data from memory and visualizes the reranking scores and trace links.
+
+### 5. The Tracing System (Run ID Lifecycle)
+How does the "Transparency Board" get the exact link to the debug trace?
+1.  **The Net (`collect_runs`):** We wrap the pipeline execution in a `with collect_runs() as cb:` block. This context manager captures any trace generated inside it.
+2.  **The Capture:** `run_id = cb.traced_runs[0].id` extracts the unique UUID of the pipeline run.
+3.  **The Handoff:** This `run_id` is saved to `st.session_state` and passed to the Right Pane to generate the deep link (`https://smith.langchain.com/.../r/{run_id}`).
+
+
+---
 
 ## ❓ Troubleshooting
 
